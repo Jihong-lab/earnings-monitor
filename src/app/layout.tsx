@@ -24,35 +24,37 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <header className="border-b border-zinc-200 dark:border-zinc-800">
-          <div className="max-w-5xl mx-auto px-6 py-5">
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="bg-gray-50 text-gray-900 min-h-screen antialiased">
+        <header className="bg-white border-b border-gray-200">
+          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link href="/" className="block">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                Earnings Monitor
-              </h1>
-              <p className="text-sm text-zinc-500 mt-0.5">
-                Automated quarterly earnings analysis
-              </p>
+              <h1 className="text-xl font-bold tracking-tight">Earnings Monitor</h1>
+              <p className="text-sm text-gray-500">Automated quarterly earnings analysis</p>
             </Link>
-            <nav className="mt-4 flex gap-6 text-sm">
-              <Link href="/" className="hover:underline">
+            <nav className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <Link
+                href="/"
+                className="px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-white transition-all"
+              >
                 Earnings
               </Link>
-              <Link href="/supply-chain" className="hover:underline">
+              <Link
+                href="/supply-chain"
+                className="px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-white transition-all"
+              >
                 Supply Chain
               </Link>
-              <Link href="/wiki" className="hover:underline">
+              <Link
+                href="/wiki"
+                className="px-3 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900 hover:bg-white transition-all"
+              >
                 Wiki
               </Link>
             </nav>
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
       </body>
     </html>
   );

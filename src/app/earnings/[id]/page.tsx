@@ -6,11 +6,25 @@ import { getEventById, getLatestAnalysisForEvent } from "@/lib/db/queries";
 import { flagForExchange } from "@/lib/helpers";
 import type { Report } from "@/lib/analyzer/schema";
 
-const VS_CONS_LABEL: Record<string, { label: string; cls: string }> = {
-  beat: { label: "BEAT", cls: "bg-emerald-700 text-white" },
-  miss: { label: "MISS", cls: "bg-red-700 text-white" },
-  inline: { label: "INLINE", cls: "bg-zinc-600 text-white" },
-  unknown: { label: "—", cls: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300" },
+const VERDICT_BADGE: Record<string, string> = {
+  beat: "bg-green-600 text-white",
+  miss: "bg-red-600 text-white",
+  inline: "bg-gray-500 text-white",
+  unknown: "bg-gray-200 text-gray-700",
+};
+
+const VERDICT_LABEL: Record<string, string> = {
+  beat: "BEAT",
+  miss: "MISS",
+  inline: "INLINE",
+  unknown: "—",
+};
+
+const SENTIMENT_BADGE: Record<string, string> = {
+  positive: "bg-green-100 text-green-800",
+  negative: "bg-red-100 text-red-800",
+  neutral: "bg-gray-100 text-gray-700",
+  mixed: "bg-yellow-100 text-yellow-800",
 };
 
 export default async function EarningsDetailPage({
@@ -28,56 +42,65 @@ export default async function EarningsDetailPage({
   const company = getCompanyBySlug(event.companySlug);
   const segment = company ? getSegmentById(company.segmentId) : undefined;
   const analysis = await getLatestAnalysisForEvent(id);
+  const reportedDate = new Date(event.reportedAt).toISOString().slice(0, 10);
 
   return (
-    <article className="max-w-3xl mx-auto px-6 py-10 font-serif">
-      {/* Document header */}
-      <header className="border-b border-zinc-300 dark:border-zinc-700 pb-6 mb-8">
-        <Link
-          href="/"
-          className="font-sans text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
-          ← All earnings
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tight mt-2 mb-1">
-          {company ? `${flagForExchange(company.exchange)} ${company.name}` : event.companySlug}
-        </h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400 font-sans">
-          {company?.ticker ?? event.companySlug} · {segment?.name ?? ""} · {event.fiscalPeriod} ·
-          Reported {new Date(event.reportedAt).toISOString().slice(0, 10)}
-          {event.sourceUrl && (
-            <>
-              {" · "}
+    <div>
+      <Link
+        href={`/${reportedDate}`}
+        className="text-sm text-blue-600 hover:underline mb-6 inline-block"
+      >
+        ← Back to {reportedDate}
+      </Link>
+
+      <article className="bg-white rounded-lg border border-gray-200 px-6 py-6 md:px-8">
+        {/* Document header */}
+        <header className="border-b-2 border-slate-700 pb-3 mb-6">
+          <div className="text-xs text-gray-400 mb-2 font-mono">
+            {company?.ticker ?? event.companySlug} · {reportedDate}
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+            {company ? `${flagForExchange(company.exchange)} ${company.name}` : event.companySlug}{" "}
+            — {event.fiscalPeriod}
+          </h1>
+          <div className="flex flex-wrap items-center gap-3 mt-3 text-xs">
+            <span className="text-gray-600">
+              <span className="text-gray-400">Segment:</span> {segment?.name ?? "—"}
+            </span>
+            <span className="text-gray-600">
+              <span className="text-gray-400">Reported:</span> {reportedDate}
+            </span>
+            {event.sourceUrl && (
               <a
                 href={event.sourceUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="text-blue-600 hover:underline"
               >
-                Source
+                Source ↗
               </a>
-            </>
-          )}
-        </p>
-        {analysis && (
-          <div className="mt-4">
-            <span
-              className={`font-sans text-xs px-2 py-1 rounded uppercase tracking-wider ${
-                VS_CONS_LABEL[analysis.report.executiveSummary.vsConsensus].cls
-              }`}
-            >
-              vs Consensus: {VS_CONS_LABEL[analysis.report.executiveSummary.vsConsensus].label}
-            </span>
+            )}
+            {analysis && (
+              <span
+                className={`ml-auto text-xs font-semibold px-2 py-0.5 rounded ${VERDICT_BADGE[analysis.report.executiveSummary.vsConsensus]}`}
+              >
+                {VERDICT_LABEL[analysis.report.executiveSummary.vsConsensus]}
+              </span>
+            )}
           </div>
-        )}
-      </header>
+        </header>
 
-      {!analysis ? (
-        <p className="text-sm text-zinc-500 font-sans">No analysis yet.</p>
-      ) : (
-        <ReportDoc report={analysis.report} model={analysis.model ?? "unknown"} createdAt={analysis.createdAt} />
-      )}
-    </article>
+        {!analysis ? (
+          <p className="text-sm text-gray-500">No analysis yet.</p>
+        ) : (
+          <ReportDoc
+            report={analysis.report}
+            model={analysis.model ?? "unknown"}
+            createdAt={analysis.createdAt}
+          />
+        )}
+      </article>
+    </div>
   );
 }
 
@@ -92,33 +115,44 @@ function ReportDoc({
 }) {
   return (
     <>
-      <Section title="Executive Summary">
-        <p className="text-base leading-relaxed mb-3">
+      <Section title="1. Executive Summary">
+        <p className="text-sm leading-relaxed text-gray-800 mb-3">
+          <strong className="text-slate-900">Overall:</strong>{" "}
           {report.executiveSummary.oneLineAssessment}
         </p>
-        <ul className="text-sm leading-relaxed space-y-1.5 list-disc pl-5">
+        <ul className="text-sm leading-relaxed text-gray-800 list-disc pl-5 space-y-1">
           {report.executiveSummary.highlights.map((h, i) => (
             <li key={i}>{h}</li>
           ))}
         </ul>
       </Section>
 
-      <Section title="Scores">
-        <div className="font-sans text-sm">
-          <table className="w-full">
-            <tbody>
-              {(["revenueGrowth", "margins", "guidance", "sentiment"] as const).map((k) => (
-                <tr key={k} className="border-b border-zinc-200 dark:border-zinc-800">
-                  <td className="py-1.5 text-zinc-700 dark:text-zinc-300">{SCORE_LABELS[k]}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums">{report.scores[k]} / 100</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Section title="2. Scores">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {(["revenueGrowth", "margins", "guidance", "sentiment"] as const).map((k) => {
+            const score = report.scores[k];
+            const color =
+              score >= 70
+                ? "text-green-600"
+                : score >= 50
+                  ? "text-yellow-600"
+                  : "text-red-600";
+            return (
+              <div
+                key={k}
+                className="border border-gray-200 rounded p-3 text-center bg-gray-50"
+              >
+                <div className="text-xs text-gray-500 uppercase tracking-wider">
+                  {SCORE_LABELS[k]}
+                </div>
+                <div className={`text-2xl font-bold font-mono ${color}`}>{score}</div>
+              </div>
+            );
+          })}
         </div>
       </Section>
 
-      <Section title="Quarterly KPIs">
+      <Section title="3. Quarterly KPIs">
         <KpiTable kpis={report.quarterlyKpis} />
       </Section>
 
@@ -130,56 +164,36 @@ function ReportDoc({
 
       {report.revenueMix.map((mb, i) => (
         <Section key={i} title={mb.dimension}>
-          <table className="w-full text-sm font-sans">
-            <tbody>
-              {mb.entries.map((e, j) => (
-                <tr key={j} className="border-b border-zinc-200 dark:border-zinc-800">
-                  <td className="py-1.5">{e.category}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums">{e.value ?? "—"}</td>
-                  <td className="py-1.5 text-right text-zinc-500 text-xs font-mono">
-                    {e.growth ?? ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            headers={["Category", "Value", "Growth"]}
+            rows={mb.entries.map((e) => [e.category, e.value ?? "—", e.growth ?? "—"])}
+            numericFromCol={1}
+          />
         </Section>
       ))}
 
-      <Section title="Guidance">
+      <Section title="4. Guidance">
         {report.guidance.nextPeriod.length > 0 && (
           <>
-            <h3 className="text-sm font-semibold mt-1 mb-2 font-sans">Next period</h3>
-            <table className="w-full text-sm font-sans mb-4">
-              <thead className="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
-                <tr>
-                  <th className="text-left py-1.5 font-medium">Metric</th>
-                  <th className="text-right py-1.5 font-medium">Guided</th>
-                  <th className="text-right py-1.5 font-medium">Consensus</th>
-                  <th className="text-right py-1.5 font-medium">Delta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.guidance.nextPeriod.map((g, i) => (
-                  <tr key={i} className="border-b border-zinc-200 dark:border-zinc-800">
-                    <td className="py-1.5">{g.metric}</td>
-                    <td className="py-1.5 text-right font-mono tabular-nums">{g.guided}</td>
-                    <td className="py-1.5 text-right font-mono tabular-nums text-zinc-500">
-                      {g.consensus ?? "—"}
-                    </td>
-                    <td className="py-1.5 text-right font-mono tabular-nums text-zinc-500">
-                      {g.delta ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <h3 className="text-sm font-semibold text-slate-700 mt-2 mb-2">Next period</h3>
+            <DataTable
+              headers={["Metric", "Guided", "Consensus", "Delta"]}
+              rows={report.guidance.nextPeriod.map((g) => [
+                g.metric,
+                g.guided,
+                g.consensus ?? "—",
+                g.delta ?? "—",
+              ])}
+              numericFromCol={1}
+            />
           </>
         )}
         {report.guidance.fullYearOutlook.length > 0 && (
           <>
-            <h3 className="text-sm font-semibold mt-3 mb-2 font-sans">Full-year outlook</h3>
-            <ul className="text-sm leading-relaxed space-y-1.5 list-disc pl-5 mb-4">
+            <h3 className="text-sm font-semibold text-slate-700 mt-4 mb-2">
+              Full-year outlook
+            </h3>
+            <ul className="text-sm text-gray-800 list-disc pl-5 space-y-1">
               {report.guidance.fullYearOutlook.map((f, i) => (
                 <li key={i}>{f}</li>
               ))}
@@ -188,8 +202,10 @@ function ReportDoc({
         )}
         {report.guidance.positiveFactors.length > 0 && (
           <>
-            <h3 className="text-sm font-semibold mt-3 mb-2 font-sans">Positive factors</h3>
-            <ul className="text-sm leading-relaxed space-y-1.5 list-disc pl-5 mb-4">
+            <h3 className="text-sm font-semibold text-green-700 mt-4 mb-2">
+              Positive factors
+            </h3>
+            <ul className="text-sm text-gray-800 list-disc pl-5 space-y-1">
               {report.guidance.positiveFactors.map((p, i) => (
                 <li key={i}>{p}</li>
               ))}
@@ -198,8 +214,8 @@ function ReportDoc({
         )}
         {report.guidance.riskFactors.length > 0 && (
           <>
-            <h3 className="text-sm font-semibold mt-3 mb-2 font-sans">Risk factors</h3>
-            <ul className="text-sm leading-relaxed space-y-1.5 list-disc pl-5">
+            <h3 className="text-sm font-semibold text-red-700 mt-4 mb-2">Risk factors</h3>
+            <ul className="text-sm text-gray-800 list-disc pl-5 space-y-1">
               {report.guidance.riskFactors.map((r, i) => (
                 <li key={i}>{r}</li>
               ))}
@@ -208,14 +224,21 @@ function ReportDoc({
         )}
       </Section>
 
-      <Section title="Management Commentary">
-        <div className="space-y-5">
+      <Section title="5. Management Commentary">
+        <div className="space-y-4">
           {report.managementRemarks.map((m, i) => (
             <div key={i}>
-              <h3 className="font-semibold mb-1">{m.topic}</h3>
-              <p className="text-sm leading-relaxed">{m.commentary}</p>
+              <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                {m.topic}
+                <span
+                  className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${SENTIMENT_BADGE[m.sentiment]}`}
+                >
+                  {m.sentiment}
+                </span>
+              </h3>
+              <p className="text-sm text-gray-800 leading-relaxed mt-1">{m.commentary}</p>
               {m.bestQuote && (
-                <blockquote className="mt-2 pl-4 border-l-2 border-zinc-300 dark:border-zinc-700 text-sm italic text-zinc-700 dark:text-zinc-300">
+                <blockquote className="mt-2 pl-3 border-l-2 border-gray-300 text-sm italic text-gray-600">
                   &ldquo;{m.bestQuote}&rdquo;
                 </blockquote>
               )}
@@ -225,16 +248,16 @@ function ReportDoc({
       </Section>
 
       {report.qaHighlights.length > 0 && (
-        <Section title="Q&A Highlights">
-          <div className="space-y-5">
+        <Section title="6. Q&A Highlights">
+          <div className="space-y-4">
             {report.qaHighlights.map((qa, i) => (
               <div key={i}>
-                <p className="text-sm font-semibold">
+                <p className="text-sm font-semibold text-slate-700">
                   Q{qa.analystFirm ? ` (${qa.analystFirm})` : ""}: {qa.question}
                 </p>
-                <p className="text-sm leading-relaxed mt-1">A: {qa.response}</p>
+                <p className="text-sm text-gray-800 leading-relaxed mt-1">A: {qa.response}</p>
                 {qa.bestQuote && (
-                  <blockquote className="mt-2 pl-4 border-l-2 border-zinc-300 dark:border-zinc-700 text-sm italic text-zinc-700 dark:text-zinc-300">
+                  <blockquote className="mt-2 pl-3 border-l-2 border-gray-300 text-sm italic text-gray-600">
                     &ldquo;{qa.bestQuote}&rdquo;
                   </blockquote>
                 )}
@@ -246,25 +269,21 @@ function ReportDoc({
 
       {report.crossCuttingThemes.length > 0 && (
         <Section title="Themes">
-          <div className="font-sans text-sm">
+          <div className="flex flex-wrap gap-2">
             {report.crossCuttingThemes.map((t, i) => (
-              <span key={i}>
-                {i > 0 && <span className="text-zinc-400">, </span>}
-                <Link
-                  href={`/wiki?theme=${encodeURIComponent(t.name)}`}
-                  className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
-                >
-                  {t.name}
-                </Link>
-                <span className="text-xs text-zinc-500"> ({t.sentiment})</span>
+              <span
+                key={i}
+                className={`text-xs px-2 py-0.5 rounded ${SENTIMENT_BADGE[t.sentiment]}`}
+              >
+                {t.name}
               </span>
             ))}
           </div>
         </Section>
       )}
 
-      <Section title="Investor Key Takeaways">
-        <ol className="text-sm leading-relaxed space-y-2 list-decimal pl-5">
+      <Section title="7. Investor Key Takeaways">
+        <ol className="text-sm text-gray-800 leading-relaxed list-decimal pl-5 space-y-1.5">
           {report.investorTakeaways.map((t, i) => (
             <li key={i}>{t}</li>
           ))}
@@ -273,7 +292,7 @@ function ReportDoc({
 
       {report.flags.length > 0 && (
         <Section title="Flags">
-          <ul className="text-sm leading-relaxed space-y-1.5 list-disc pl-5 text-zinc-700 dark:text-zinc-300">
+          <ul className="text-sm text-gray-700 list-disc pl-5 space-y-1">
             {report.flags.map((f, i) => (
               <li key={i}>{f}</li>
             ))}
@@ -281,15 +300,16 @@ function ReportDoc({
         </Section>
       )}
 
-      <footer className="mt-12 pt-4 border-t border-zinc-300 dark:border-zinc-700 font-sans text-xs text-zinc-500">
-        Generated {new Date(createdAt).toISOString().slice(0, 19).replace("T", " ")} · Model: {model}
+      <footer className="mt-8 pt-3 border-t border-gray-200 text-[10px] text-gray-400">
+        Generated {new Date(createdAt).toISOString().slice(0, 19).replace("T", " ")} · Model:{" "}
+        {model}
       </footer>
     </>
   );
 }
 
 const SCORE_LABELS = {
-  revenueGrowth: "Revenue Growth",
+  revenueGrowth: "Rev Growth",
   margins: "Margins",
   guidance: "Guidance",
   sentiment: "Sentiment",
@@ -307,41 +327,75 @@ function KpiTable({
   }>;
 }) {
   return (
-    <table className="w-full text-sm font-sans">
-      <thead className="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
-        <tr>
-          <th className="text-left py-1.5 font-medium">Metric</th>
-          <th className="text-right py-1.5 font-medium">Value</th>
-          <th className="text-right py-1.5 font-medium">YoY</th>
-          <th className="text-right py-1.5 font-medium">QoQ</th>
-          <th className="text-right py-1.5 font-medium">vs Cons</th>
-        </tr>
-      </thead>
-      <tbody>
-        {kpis.map((k, i) => (
-          <tr key={i} className="border-b border-zinc-200 dark:border-zinc-800">
-            <td className="py-1.5">{k.label}</td>
-            <td className="py-1.5 text-right font-mono tabular-nums">{k.value ?? "—"}</td>
-            <td className="py-1.5 text-right font-mono tabular-nums text-zinc-500">
-              {k.yoy ?? "—"}
-            </td>
-            <td className="py-1.5 text-right font-mono tabular-nums text-zinc-500">
-              {k.qoq ?? "—"}
-            </td>
-            <td className="py-1.5 text-right font-mono tabular-nums text-zinc-500">
-              {k.vsConsensus ?? "—"}
-            </td>
+    <DataTable
+      headers={["Metric", "Value", "YoY", "QoQ", "vs Cons"]}
+      rows={kpis.map((k) => [
+        k.label,
+        k.value ?? "—",
+        k.yoy ?? "—",
+        k.qoq ?? "—",
+        k.vsConsensus ?? "—",
+      ])}
+      numericFromCol={1}
+    />
+  );
+}
+
+function DataTable({
+  headers,
+  rows,
+  numericFromCol = 1,
+}: {
+  headers: string[];
+  rows: (string | number)[][];
+  numericFromCol?: number;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs border border-gray-300">
+        <thead>
+          <tr className="bg-slate-700 text-white">
+            {headers.map((h, i) => (
+              <th
+                key={i}
+                className={`px-2.5 py-2 font-semibold border border-slate-700 ${
+                  i < numericFromCol ? "text-left" : "text-right"
+                }`}
+              >
+                {h}
+              </th>
+            ))}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className={i % 2 === 1 ? "bg-gray-50" : ""}>
+              {row.map((cell, j) => (
+                <td
+                  key={j}
+                  className={`px-2.5 py-1.5 border border-gray-200 ${
+                    j === 0
+                      ? "font-medium text-gray-900 bg-gray-50"
+                      : j >= numericFromCol
+                        ? "text-right font-mono tabular-nums text-gray-800"
+                        : "text-gray-800"
+                  }`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="font-sans text-xs uppercase tracking-wider text-zinc-500 mb-3 border-b border-zinc-200 dark:border-zinc-800 pb-1">
+    <section className="mt-6">
+      <h2 className="text-base font-bold text-slate-700 border-b border-gray-300 pb-1 mb-3">
         {title}
       </h2>
       {children}

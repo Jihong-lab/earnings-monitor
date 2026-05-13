@@ -15,20 +15,20 @@ export default async function AddEarningsPage({
   if (!company) notFound();
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12">
+    <div>
       <Link
         href={`/companies/${slug}`}
-        className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+        className="text-sm text-blue-600 hover:underline mb-4 inline-block"
       >
         ← {company.name}
       </Link>
-      <h1 className="text-2xl font-semibold tracking-tight mt-2 mb-1">
-        Add earnings report
-      </h1>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-8">
+      <h2 className="text-2xl font-bold mb-1">Add earnings report</h2>
+      <p className="text-sm text-gray-500 mb-6">
         {company.name} · {company.ticker}
       </p>
-      <AddEarningsForm slug={slug} />
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <AddEarningsForm slug={slug} />
+      </div>
     </div>
   );
 }

@@ -5,16 +5,23 @@ import { earningsEvents, analyses } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { getCompanyBySlug } from "@/data/companies";
 import { getSegmentById } from "@/data/segments";
-import { flagForExchange } from "@/lib/helpers";
+import { flagForExchange, countryForExchange } from "@/lib/helpers";
 import type { Report } from "@/lib/analyzer/schema";
 
 export const dynamic = "force-dynamic";
 
-const VS_CONS_COLORS: Record<string, string> = {
-  beat: "bg-emerald-600 text-white",
-  miss: "bg-red-600 text-white",
-  inline: "bg-zinc-500 text-white",
-  unknown: "bg-zinc-300 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300",
+const VERDICT_BADGE: Record<string, string> = {
+  beat: "bg-green-100 text-green-800",
+  miss: "bg-red-100 text-red-800",
+  inline: "bg-gray-100 text-gray-700",
+  unknown: "bg-gray-100 text-gray-500",
+};
+
+const VERDICT_LABEL: Record<string, string> = {
+  beat: "Beat",
+  miss: "Miss",
+  inline: "Inline",
+  unknown: "—",
 };
 
 export default async function DatePage({
@@ -25,10 +32,11 @@ export default async function DatePage({
   const { date } = await params;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) notFound();
 
-  // Fetch events on this date, with their latest analysis (vs consensus)
   const rows = await db
     .select({
-      event: earningsEvents,
+      eventId: earningsEvents.id,
+      companySlug: earningsEvents.companySlug,
+      fiscalPeriod: earningsEvents.fiscalPeriod,
       report: analyses.report,
     })
     .from(earningsEvents)
@@ -36,65 +44,86 @@ export default async function DatePage({
     .where(sql`date(${earningsEvents.reportedAt}) = ${date}`)
     .orderBy(earningsEvents.companySlug);
 
+  // Group by country
+  const byCountry = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const c = getCompanyBySlug(r.companySlug);
+    const country = c ? countryForExchange(c.exchange) : "Other";
+    if (!byCountry.has(country)) byCountry.set(country, []);
+    byCountry.get(country)!.push(r);
+  }
+  const countries = Array.from(byCountry.keys()).sort();
+
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
+    <div>
       <Link
         href="/"
-        className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+        className="text-sm text-blue-600 hover:underline mb-6 inline-block"
       >
-        ← All dates
+        ← Back to all dates
       </Link>
-      <h2 className="text-2xl font-semibold tracking-tight mt-2 mb-6 font-mono">
-        {date}
-      </h2>
+      <h2 className="text-2xl font-bold mb-6">{date}</h2>
 
       {rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">No earnings reports on this date.</p>
+        <p className="text-sm text-gray-500">No earnings reports on this date.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead className="text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
-            <tr>
-              <th className="text-left py-2 font-medium"></th>
-              <th className="text-left py-2 font-medium">Ticker</th>
-              <th className="text-left py-2 font-medium">Company</th>
-              <th className="text-left py-2 font-medium">Segment</th>
-              <th className="text-left py-2 font-medium">Period</th>
-              <th className="text-left py-2 font-medium">vs Cons</th>
-              <th className="text-right py-2 font-medium">Report</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ event: e, report: r }) => {
-              const c = getCompanyBySlug(e.companySlug);
-              const seg = c ? getSegmentById(c.segmentId) : undefined;
-              const vsCons = (r as Report | null)?.executiveSummary.vsConsensus ?? "unknown";
-              return (
-                <tr key={e.id} className="border-b border-zinc-100 dark:border-zinc-900">
-                  <td className="py-2.5 text-lg">{c ? flagForExchange(c.exchange) : "🌐"}</td>
-                  <td className="py-2.5 font-mono text-xs">{c?.ticker ?? e.companySlug}</td>
-                  <td className="py-2.5">{c?.name ?? e.companySlug}</td>
-                  <td className="py-2.5 text-zinc-500">{seg?.name ?? "-"}</td>
-                  <td className="py-2.5 font-mono text-xs">{e.fiscalPeriod}</td>
-                  <td className="py-2.5">
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded uppercase tracking-wider ${VS_CONS_COLORS[vsCons]}`}
+        countries.map((country) => {
+          const list = byCountry.get(country)!;
+          return (
+            <section key={country} className="mb-8">
+              <h3 className="text-lg font-semibold text-gray-700 mb-3 border-b pb-1">
+                {country}
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {list.map((r) => {
+                  const c = getCompanyBySlug(r.companySlug);
+                  const seg = c ? getSegmentById(c.segmentId) : undefined;
+                  const report = r.report as Report | null;
+                  const verdict = report?.executiveSummary.vsConsensus ?? "unknown";
+                  const oneLiner = report?.executiveSummary.oneLineAssessment;
+                  return (
+                    <div
+                      key={r.eventId}
+                      className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col gap-2"
                     >
-                      {vsCons}
-                    </span>
-                  </td>
-                  <td className="py-2.5 text-right">
-                    <Link
-                      href={`/earnings/${e.id}`}
-                      className="text-zinc-700 dark:text-zinc-300 hover:underline"
-                    >
-                      Report →
-                    </Link>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">
+                            {c ? flagForExchange(c.exchange) : "🌐"}
+                          </span>
+                          <span className="font-bold text-sm">
+                            {c?.ticker ?? r.companySlug}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${VERDICT_BADGE[verdict]}`}
+                        >
+                          {VERDICT_LABEL[verdict]}
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-800">
+                        {c?.name ?? r.companySlug}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span>{seg?.name ?? "—"}</span>
+                        <span>{r.fiscalPeriod}</span>
+                      </div>
+                      {oneLiner && (
+                        <p className="text-xs text-gray-600 line-clamp-2">{oneLiner}</p>
+                      )}
+                      <Link
+                        href={`/earnings/${r.eventId}`}
+                        className="text-xs text-blue-600 hover:underline mt-1"
+                      >
+                        View Report →
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })
       )}
     </div>
   );

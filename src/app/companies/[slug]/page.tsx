@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getCompanyBySlug } from "@/data/companies";
 import { getSegmentById } from "@/data/segments";
 import { getEventsForCompany } from "@/lib/db/queries";
+import { flagForExchange } from "@/lib/helpers";
 
 export default async function CompanyDetailPage({
   params,
@@ -17,19 +18,20 @@ export default async function CompanyDetailPage({
   const events = await getEventsForCompany(slug);
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-12">
-      <div className="mb-8 flex items-baseline justify-between">
+    <div>
+      <Link
+        href="/wiki"
+        className="text-sm text-blue-600 hover:underline mb-6 inline-block"
+      >
+        ← Back to Wiki
+      </Link>
+
+      <div className="flex items-start justify-between mb-6">
         <div>
-          <Link
-            href="/wiki"
-            className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          >
-            ← Wiki
-          </Link>
-          <h1 className="text-3xl font-semibold tracking-tight mt-2">
-            {company.name}
-          </h1>
-          <div className="flex gap-3 mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <h2 className="text-2xl font-bold mb-1">
+            {flagForExchange(company.exchange)} {company.name}
+          </h2>
+          <div className="flex gap-3 text-sm text-gray-500">
             <span className="font-mono">{company.ticker}</span>
             <span>·</span>
             <span>{segment?.name}</span>
@@ -37,48 +39,36 @@ export default async function CompanyDetailPage({
         </div>
         <Link
           href={`/companies/${slug}/earnings/new`}
-          className="rounded-md bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 text-sm font-medium hover:opacity-90"
+          className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           + Add earnings
         </Link>
       </div>
 
-      <section>
-        <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500 mb-3">
-          Earnings reports
-        </h2>
-        {events.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-8 text-center text-zinc-500">
-            No earnings reports yet.{" "}
+      <h3 className="text-sm font-bold text-gray-900 mb-3">Earnings reports</h3>
+      {events.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 px-5 py-8 text-center text-sm text-gray-500">
+          No earnings reports yet for this company. The daily auto-fetcher will populate this
+          when they next report.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {events.map((e) => (
             <Link
-              href={`/companies/${slug}/earnings/new`}
-              className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
+              key={e.id}
+              href={`/earnings/${e.id}`}
+              className="block bg-white rounded-lg border border-gray-200 px-5 py-4 hover:border-blue-400 hover:shadow-sm transition-all"
             >
-              Add the first one
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{e.fiscalPeriod}</span>
+                <span className="text-sm text-gray-500">
+                  Reported {new Date(e.reportedAt).toISOString().slice(0, 10)}
+                </span>
+              </div>
             </Link>
-            .
-          </div>
-        ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 border-y border-zinc-200 dark:border-zinc-800">
-            {events.map((e) => (
-              <li key={e.id} className="py-3">
-                <Link
-                  href={`/earnings/${e.id}`}
-                  className="flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-900 -mx-2 px-2 py-1 rounded"
-                >
-                  <div>
-                    <div className="font-medium">{e.fiscalPeriod}</div>
-                    <div className="text-xs text-zinc-500 mt-0.5">
-                      Reported {new Date(e.reportedAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <span className="text-zinc-400">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

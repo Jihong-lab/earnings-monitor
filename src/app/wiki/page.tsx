@@ -3,85 +3,121 @@ import { companies, getCompaniesBySegment } from "@/data/companies";
 import { segments } from "@/data/segments";
 import { db } from "@/lib/db";
 import { earningsEvents, analyses } from "@/lib/db/schema";
-import { sql } from "drizzle-orm";
+import { sql, eq, desc } from "drizzle-orm";
 import { flagForExchange } from "@/lib/helpers";
 import type { Report } from "@/lib/analyzer/schema";
 
 export const dynamic = "force-dynamic";
 
-export default async function WikiPage() {
-  // Companies with at least one earnings event
-  const eventRows = await db
-    .select({ companySlug: earningsEvents.companySlug })
-    .from(earningsEvents)
-    .groupBy(earningsEvents.companySlug);
-  const reportedSlugs = new Set(eventRows.map((r) => r.companySlug));
+const VERDICT_DOT: Record<string, string> = {
+  beat: "bg-green-500",
+  miss: "bg-red-500",
+  inline: "bg-gray-400",
+  unknown: "bg-gray-300",
+};
 
-  // Aggregate cross-cutting themes across all analyses
-  const analysisRows = await db.select({ report: analyses.report }).from(analyses);
+export default async function WikiPage() {
+  // Latest event per company with vs-consensus
+  const rows = await db
+    .select({
+      companySlug: earningsEvents.companySlug,
+      report: analyses.report,
+    })
+    .from(analyses)
+    .innerJoin(earningsEvents, eq(analyses.eventId, earningsEvents.id))
+    .orderBy(desc(earningsEvents.reportedAt));
+
+  const latestPerCompany = new Map<string, Report>();
+  for (const r of rows) {
+    if (!latestPerCompany.has(r.companySlug)) {
+      latestPerCompany.set(r.companySlug, r.report as Report);
+    }
+  }
+
+  // Themes aggregation
   const themeCounts = new Map<string, number>();
-  for (const row of analysisRows) {
-    const r = row.report as Report | null;
-    if (!r) continue;
-    for (const t of r.crossCuttingThemes) {
+  for (const r of rows) {
+    const rep = r.report as Report;
+    for (const t of rep.crossCuttingThemes) {
       themeCounts.set(t.name, (themeCounts.get(t.name) ?? 0) + 1);
     }
   }
   const topThemes = Array.from(themeCounts.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 12);
+    .slice(0, 15);
 
   const totalCompanies = companies.length;
-  const reportedCount = reportedSlugs.size;
+  const reportedCount = latestPerCompany.size;
   const lastUpdated = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight">Wiki</h2>
-        <p className="text-sm text-zinc-500 mt-1">
-          {totalCompanies} companies across {segments.length} segments · {reportedCount} with
-          earnings data · updated {lastUpdated}
-        </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Knowledge Wiki</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {totalCompanies} companies across {segments.length} segments · {reportedCount}{" "}
+            with earnings data
+          </p>
+        </div>
+        <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded text-xs font-semibold">
+          Updated {lastUpdated}
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {segments.map((seg) => {
           const segCompanies = getCompaniesBySegment(seg.id);
-          const segReported = segCompanies.filter((c) => reportedSlugs.has(c.slug)).length;
-          const sample = segCompanies.slice(0, 4);
-          const more = segCompanies.length - sample.length;
+          const reported = segCompanies.filter((c) => latestPerCompany.has(c.slug));
           return (
             <div
               key={seg.id}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-md p-4"
+              className="block bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all"
             >
-              <div className="flex items-baseline justify-between mb-1">
-                <h3 className="font-semibold">{seg.name}</h3>
-                <span className="text-xs text-zinc-500 font-mono">
-                  {segReported} reported / {segCompanies.length} total
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500 mb-3">{seg.description}</p>
-              <ul className="text-sm space-y-1">
-                {sample.map((c) => (
-                  <li key={c.slug} className="flex items-baseline gap-2">
-                    <span>{flagForExchange(c.exchange)}</span>
-                    <Link
-                      href={`/companies/${c.slug}`}
-                      className="hover:underline truncate"
-                    >
-                      {c.name}
-                    </Link>
-                    <span className="text-xs text-zinc-500 font-mono ml-auto">
-                      {c.ticker}
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-sm text-gray-900">{seg.name}</h3>
+                <div className="flex items-center gap-2">
+                  {reported.length > 0 && (
+                    <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">
+                      {reported.length} reported
                     </span>
-                  </li>
-                ))}
-                {more > 0 && (
-                  <li className="text-xs text-zinc-500">+{more} more</li>
-                )}
-              </ul>
+                  )}
+                  <span className="text-xs text-gray-400">{segCompanies.length} total</span>
+                </div>
+              </div>
+              {reported.length === 0 ? (
+                <p className="text-xs text-gray-400">No earnings data yet</p>
+              ) : (
+                <div className="space-y-1">
+                  {segCompanies.map((c) => {
+                    const rep = latestPerCompany.get(c.slug);
+                    const verdict = rep?.executiveSummary.vsConsensus ?? "unknown";
+                    return (
+                      <div
+                        key={c.slug}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <div className="flex items-center gap-1.5 mr-2 truncate">
+                          <span className="text-sm">{flagForExchange(c.exchange)}</span>
+                          <Link
+                            href={`/companies/${c.slug}`}
+                            className="text-gray-700 hover:text-blue-600 hover:underline truncate"
+                          >
+                            {c.name}
+                          </Link>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-mono text-gray-400">{c.ticker}</span>
+                          <span
+                            className={`w-2 h-2 rounded-full ${VERDICT_DOT[verdict]}`}
+                            title={`vs consensus: ${verdict}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
@@ -89,20 +125,15 @@ export default async function WikiPage() {
 
       {topThemes.length > 0 && (
         <div>
-          <h2 className="text-sm font-medium uppercase tracking-wider text-zinc-500 mb-3">
-            Themes
-          </h2>
-          <div className="text-sm">
-            {topThemes.map(([name, count], i) => (
-              <span key={name}>
-                {i > 0 && <span className="text-zinc-400">, </span>}
-                <Link
-                  href={`/wiki/themes/${encodeURIComponent(name)}`}
-                  className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
-                >
-                  {name}
-                </Link>
-                <span className="text-xs text-zinc-500"> ({count})</span>
+          <h3 className="text-sm font-bold text-gray-900 mb-3">Themes</h3>
+          <div className="flex flex-wrap gap-2">
+            {topThemes.map(([name, count]) => (
+              <span
+                key={name}
+                className="bg-white border border-gray-200 px-3 py-1 rounded-full text-xs text-gray-700"
+              >
+                {name}
+                <span className="ml-1 text-gray-400">({count})</span>
               </span>
             ))}
           </div>
