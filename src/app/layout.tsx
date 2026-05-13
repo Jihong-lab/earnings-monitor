@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Earnings Monitor",
-  description: "Automated quarterly earnings analysis across US Tech, Asia Tech, and Asia Financials",
+  description: "Automated quarterly earnings analysis",
 };
 
 export default function RootLayout({
@@ -30,17 +30,27 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <header className="border-b border-zinc-200 dark:border-zinc-800">
-          <nav className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-6">
-            <Link href="/" className="font-semibold text-base">
-              Earnings Monitor
+          <div className="max-w-5xl mx-auto px-6 py-5">
+            <Link href="/" className="block">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Earnings Monitor
+              </h1>
+              <p className="text-sm text-zinc-500 mt-0.5">
+                Automated quarterly earnings analysis
+              </p>
             </Link>
-            <Link
-              href="/companies"
-              className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-            >
-              Companies
-            </Link>
-          </nav>
+            <nav className="mt-4 flex gap-6 text-sm">
+              <Link href="/" className="hover:underline">
+                Earnings
+              </Link>
+              <Link href="/supply-chain" className="hover:underline">
+                Supply Chain
+              </Link>
+              <Link href="/wiki" className="hover:underline">
+                Wiki
+              </Link>
+            </nav>
+          </div>
         </header>
         <main className="flex-1">{children}</main>
       </body>
