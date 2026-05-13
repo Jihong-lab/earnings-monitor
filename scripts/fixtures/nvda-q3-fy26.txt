@@ -1,0 +1,67 @@
+NVIDIA Q3 Fiscal 2026 Financial Results Press Release
+Date: November 19, 2025
+
+FINANCIAL HIGHLIGHTS
+
+Record Q3 FY2026 Results:
+- Total revenue: $57.0 billion (up 22% QoQ, up 62% YoY)
+- Data Center revenue: $51.2 billion (up 25% QoQ, up 66% YoY)
+- Gaming revenue: $4.3 billion (down 1% QoQ, up 30% YoY)
+- Professional Visualization revenue: $760 million (up 26% QoQ, up 56% YoY)
+- Automotive revenue: $592 million (up 1% QoQ, up 32% YoY)
+
+Profitability Metrics:
+- GAAP gross margin: 73.4% (vs. 72.4% prior quarter, 74.6% year-ago)
+- Non-GAAP gross margin: 73.6%
+- GAAP diluted EPS: $1.30
+- Non-GAAP diluted EPS: $1.30
+- GAAP net income: $31.91 billion
+- Operating income: $36.01 billion (GAAP), $37.75 billion (non-GAAP)
+
+CEO COMMENTARY
+
+Jensen Huang, founder and CEO, stated: "Blackwell sales are off the charts, and cloud GPUs are sold out. Compute demand keeps accelerating and compounding across training and inference — each growing exponentially."
+
+Q4 FY2026 OUTLOOK
+
+- Revenue expected: $65.0 billion (±2%)
+- GAAP gross margin: 74.8% (±50 basis points)
+- Non-GAAP gross margin: 75.0% (±50 basis points)
+- GAAP operating expenses: ~$6.7 billion
+- Non-GAAP operating expenses: ~$5.0 billion
+- Tax rate: 17.0% (±1%)
+
+KEY BUSINESS HIGHLIGHTS
+
+Data Center Dominance:
+NVIDIA revealed Blackwell achieved highest performance in SemiAnalysis InferenceMAX benchmarks with 10x throughput per megawatt versus prior generation. Strategic partnerships announced include:
+- OpenAI: deploying at least 10 gigawatts of NVIDIA systems
+- Anthropic: 1 gigawatt of compute capacity
+- US Department of Energy: Solstice supercomputer with 100,000 Blackwell GPUs
+
+Product Innovations:
+- NVIDIA Rubin CPX unveiled for massive-context processing
+- NVQLink introduced for GPU-quantum processor coupling
+- NVIDIA BlueField-4 processor launched
+- Omniverse DSX announced for AI factory design
+
+Gaming and Visualization:
+New titles launched with DLSS 4 Multi Frame Generation technology. GeForce celebrated 25 years with Seoul festival featuring RTX announcements.
+
+Autonomous Systems:
+NVIDIA DRIVE AGX Hyperion 10 platform introduced. Partnership with Uber announced targeting 100,000 level 4-ready vehicles by 2027.
+
+SHAREHOLDER RETURNS
+
+During first nine months of fiscal 2026, NVIDIA returned $37.0 billion through share repurchases and dividends. Remaining authorization: $62.2 billion.
+
+Next quarterly dividend: $0.01 per share on December 26, 2025.
+
+CASH FLOW AND BALANCE SHEET
+
+Nine-Month Operating Metrics:
+- Operating cash flow: $66.53 billion
+- Free cash flow: $61.68 billion
+- Cash and equivalents: $11.49 billion
+- Total assets: $161.15 billion
+- Shareholders' equity: $118.90 billion
