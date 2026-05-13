@@ -135,7 +135,7 @@ function ReportDoc({
               {mb.entries.map((e, j) => (
                 <tr key={j} className="border-b border-zinc-200 dark:border-zinc-800">
                   <td className="py-1.5">{e.category}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums">{e.value}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums">{e.value ?? "—"}</td>
                   <td className="py-1.5 text-right text-zinc-500 text-xs font-mono">
                     {e.growth ?? ""}
                   </td>
@@ -300,7 +300,7 @@ function KpiTable({
 }: {
   kpis: Array<{
     label: string;
-    value: string;
+    value: string | null;
     yoy: string | null;
     qoq: string | null;
     vsConsensus: string | null;
@@ -321,7 +321,7 @@ function KpiTable({
         {kpis.map((k, i) => (
           <tr key={i} className="border-b border-zinc-200 dark:border-zinc-800">
             <td className="py-1.5">{k.label}</td>
-            <td className="py-1.5 text-right font-mono tabular-nums">{k.value}</td>
+            <td className="py-1.5 text-right font-mono tabular-nums">{k.value ?? "—"}</td>
             <td className="py-1.5 text-right font-mono tabular-nums text-zinc-500">
               {k.yoy ?? "—"}
             </td>

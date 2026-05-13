@@ -22,7 +22,7 @@ export const ExecutiveSummarySchema = z.object({
 
 export const KpiSchema = z.object({
   label: z.string().describe("Metric name, e.g. 'Revenue', 'Gross margin', 'EPS'"),
-  value: z.string().describe("Reported value with units, e.g. '$57.0B', '73.4%', '$1.30'"),
+  value: z.string().nullable().describe("Reported value with units, e.g. '$57.0B', '73.4%', '$1.30'; null if not disclosed"),
   yoy: z.string().nullable().describe("YoY change with sign, e.g. '+62%', '-5%'; null if not available"),
   qoq: z.string().nullable().describe("QoQ change with sign; null if not available"),
   vsConsensus: z
@@ -33,7 +33,7 @@ export const KpiSchema = z.object({
 
 export const MixEntrySchema = z.object({
   category: z.string().describe("e.g. 'Data Center', 'Gaming', '7nm node'"),
-  value: z.string().describe("Absolute value or share, e.g. '$51.2B' or '59%'"),
+  value: z.string().nullable().describe("Absolute value or share, e.g. '$51.2B' or '59%'; null if only category disclosed"),
   growth: z.string().nullable().describe("YoY or QoQ growth context; null if not available"),
 });
 

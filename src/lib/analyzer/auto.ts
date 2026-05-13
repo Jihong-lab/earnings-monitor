@@ -105,21 +105,55 @@ function getClient(): Anthropic {
   return new Anthropic({ apiKey });
 }
 
-function extractJson(text: string): unknown {
-  let trimmed = text.trim();
-  // Strip surrounding code fence if present
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) {
-    trimmed = fence[1].trim();
-  } else {
-    // Strip any prose before/after a top-level JSON object
-    const firstBrace = trimmed.indexOf("{");
-    const lastBrace = trimmed.lastIndexOf("}");
-    if (firstBrace !== -1 && lastBrace > firstBrace) {
-      trimmed = trimmed.slice(firstBrace, lastBrace + 1);
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (c === "\\") {
+      escape = true;
+      continue;
+    }
+    if (c === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
     }
   }
-  return JSON.parse(trimmed);
+  return null;
+}
+
+function extractJson(text: string): unknown {
+  const trimmed = text.trim();
+  // 1) Try direct parse
+  try {
+    return JSON.parse(trimmed);
+  } catch {}
+  // 2) Try fence-stripped
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence) {
+    try {
+      return JSON.parse(fence[1].trim());
+    } catch {}
+  }
+  // 3) Try brace-counted extraction (handles prose before/after)
+  const objStr = extractFirstJsonObject(trimmed);
+  if (objStr) {
+    return JSON.parse(objStr);
+  }
+  throw new SyntaxError("Could not locate JSON object in response");
 }
 
 function getFinalText(response: Anthropic.Message): string {
