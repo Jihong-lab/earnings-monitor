@@ -35,9 +35,7 @@ export const analyses = pgTable("analyses", {
   eventId: integer("event_id")
     .notNull()
     .references(() => earningsEvents.id, { onDelete: "cascade" }),
-  summary: text("summary"),
-  themes: jsonb("themes"),
-  scores: jsonb("scores"),
+  report: jsonb("report").notNull(),
   model: varchar("model", { length: 64 }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
