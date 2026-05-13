@@ -1,3 +1,4 @@
+import "@/lib/env";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { ReportSchema, type Report } from "./schema";

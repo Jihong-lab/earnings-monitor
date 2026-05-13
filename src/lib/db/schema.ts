@@ -42,7 +42,19 @@ export const analyses = pgTable("analyses", {
     .defaultNow(),
 });
 
+export const cronRuns = pgTable("cron_runs", {
+  id: serial("id").primaryKey(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp("finished_at", { withTimezone: true }),
+  companiesChecked: integer("companies_checked").notNull().default(0),
+  newReportsCreated: integer("new_reports_created").notNull().default(0),
+  errors: jsonb("errors"),
+  summary: jsonb("summary"),
+});
+
 export type EarningsEvent = typeof earningsEvents.$inferSelect;
 export type NewEarningsEvent = typeof earningsEvents.$inferInsert;
 export type Analysis = typeof analyses.$inferSelect;
 export type NewAnalysis = typeof analyses.$inferInsert;
+export type CronRun = typeof cronRuns.$inferSelect;
+export type NewCronRun = typeof cronRuns.$inferInsert;
