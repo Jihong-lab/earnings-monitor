@@ -13,8 +13,6 @@ export const ExecutiveSummarySchema = z.object({
     .describe("Single sentence — the most important takeaway from this quarter"),
   highlights: z
     .array(z.string())
-    .min(3)
-    .max(8)
     .describe("3-8 bullet points with concrete numbers (revenue, EPS, margins, key segment data) including YoY and QoQ context where available"),
 });
 
@@ -41,7 +39,7 @@ export const MixBreakdownSchema = z.object({
   dimension: z
     .string()
     .describe("Breakdown dimension, e.g. 'Revenue by segment', 'Revenue by geography', 'Revenue by technology node'"),
-  entries: z.array(MixEntrySchema).min(2),
+  entries: z.array(MixEntrySchema),
 });
 
 // --- Guidance ---

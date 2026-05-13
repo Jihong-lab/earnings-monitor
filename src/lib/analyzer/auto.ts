@@ -8,47 +8,47 @@ const DEEP_MODEL = "claude-opus-4-7";
 
 // --- Stage 1: quick check (Haiku + web_search only) ---
 
-const QuickCheckSchema = z.union([
-  z.object({
-    status: z.literal("no_new_earnings"),
-    reason: z.string(),
-  }),
-  z.object({
-    status: z.literal("new"),
-    fiscalPeriod: z.string(),
-    reportedAt: z.string(),
-  }),
-]);
+const QuickCheckSchema = z.object({
+  latestFiscalPeriod: z.string().describe("e.g. FY2026Q4, CY2025Q4, or null if not found"),
+  latestReportedAt: z.string().describe("YYYY-MM-DD"),
+  notes: z.string().nullable().optional(),
+});
 
-const QUICK_SYSTEM = `You are an equity-research assistant. Your only job is to check whether a company has released a newer quarterly earnings result than the one we already have.
+const QUICK_SYSTEM = `You are an equity-research assistant. Your only job is to identify the MOST RECENT quarterly earnings result a company has reported.
 
 You will be given:
 - Company name and ticker
-- Last-known reported fiscal period (or "none")
 - Today's date
 
 PROCESS:
-1. Use web_search (1-3 calls) to find the most recent quarterly earnings result this company has reported. Look at sources like Yahoo Finance, MarketBeat, NASDAQ, the company's IR site, or news.
-2. Determine whether that most recent quarter is NEWER than the last-known period.
+1. Use web_search (1-3 calls) to find the most recent quarterly earnings result this company has reported. Look at sources like Yahoo Finance, MarketBeat, NASDAQ, the company's IR site, or news. For non-US listings, also try the company's local-market disclosures (e.g. TDnet for Japan, HKEX for HK, KIND for Korea, BSE/NSE for India, ASX for Australia).
+2. Return that quarter's info. Do NOT compare against any prior knowledge — just return what you find.
 
 RESPONSE (JSON only, no fences, no prose):
 
-If no new earnings since the last-known period (i.e. the most recent reported quarter is the same as what we have, or we already have the latest reported quarter):
-{ "status": "no_new_earnings", "reason": "<one-sentence reason citing the latest reported quarter and date>" }
+{
+  "latestFiscalPeriod": "<e.g. FY2026Q4 or CY2025Q4>",
+  "latestReportedAt": "<YYYY-MM-DD of when the earnings were reported>",
+  "notes": "<optional brief note, or null>"
+}
 
-If newer earnings have been released:
-{ "status": "new", "fiscalPeriod": "<e.g. FY2026Q4 or CY2025Q4>", "reportedAt": "<YYYY-MM-DD of when the earnings were reported>" }
-
-Do not perform deep analysis. Just identify whether new earnings exist.`;
+Do not perform deep analysis. Just identify the most recent reported quarter.`;
 
 // --- Stage 2: deep analysis (Opus + web_search + web_fetch) ---
 
-const DeepEnvelopeSchema = z.object({
+const DeepFullSchema = z.object({
   fiscalPeriod: z.string(),
   reportedAt: z.string(),
   sourceUrls: z.array(z.string()),
   report: ReportSchema,
 });
+
+const DeepAbortSchema = z.object({
+  status: z.literal("no_new_earnings"),
+  reason: z.string(),
+});
+
+const DeepEnvelopeSchema = z.union([DeepFullSchema, DeepAbortSchema]);
 
 const DEEP_SYSTEM = `You are a senior equity analyst with web research capability. A separate quick-check step has already confirmed that the company has released new quarterly earnings. Your job is to fetch the materials and produce a structured JSON report.
 
@@ -95,7 +95,12 @@ RULES:
 - vsConsensus must be "unknown" if you couldn't find consensus estimates.
 - Cross-cutting theme names must be terse and canonical (e.g. "AI HPC demand", "HBM tightness", "Auto recovery", "China weakness", "Capex acceleration", "Memory cycle inflection", "Datacenter buildout").
 - Do NOT prefix takeaway strings with "1. " etc.
-- Output ONLY the JSON.`;
+- For fields with no available data, use null for scalar fields or [] for arrays. Do not omit the field.
+
+If after fetching you determine no new earnings actually exist (e.g. the quick check was wrong, or you cannot find the period at all), return the abort envelope instead:
+{ "status": "no_new_earnings", "reason": "<short explanation of what you found instead>" }
+
+Output ONLY the JSON object.`;
 
 // --- Common helpers ---
 
@@ -199,10 +204,9 @@ async function quickCheck(opts: AutoAnalyzeOptions): Promise<{
 }> {
   const client = getClient();
   const userMessage = `Company: ${opts.companyName} (${opts.ticker})
-Last-known reported fiscal period: ${opts.lastKnownPeriod ?? "none"}
 Today's date: ${new Date().toISOString().slice(0, 10)}
 
-Check whether new earnings have been released.`;
+Find the most recent reported quarter.`;
 
   const params: Anthropic.MessageCreateParamsNonStreaming = {
     model: QUICK_MODEL,
@@ -237,12 +241,14 @@ Check whether new earnings have been released.`;
 
 // --- Stage 2 ---
 
+type DeepResult = z.infer<typeof DeepEnvelopeSchema>;
+
 async function deepAnalyze(
   opts: AutoAnalyzeOptions,
   fiscalPeriod: string,
   reportedAt: string,
 ): Promise<{
-  result: z.infer<typeof DeepEnvelopeSchema>;
+  result: DeepResult;
   inputTokens: number;
   outputTokens: number;
   toolCalls: number;
@@ -334,16 +340,12 @@ export async function autoAnalyzeFromWeb(
     deepToolCalls: 0,
   };
 
-  if (quick.result.status === "no_new_earnings") {
-    return { result: { status: "no_new_earnings", reason: quick.result.reason }, meta };
-  }
-
-  // Sanity: if the period returned matches what we already have, treat as no-new
-  if (quick.result.fiscalPeriod === opts.lastKnownPeriod) {
+  // Compare what we found to what we already have
+  if (quick.result.latestFiscalPeriod === opts.lastKnownPeriod) {
     return {
       result: {
         status: "no_new_earnings",
-        reason: `Quick check returned the already-known period ${quick.result.fiscalPeriod}`,
+        reason: `Most recent reported quarter is ${quick.result.latestFiscalPeriod} (matches last-known)`,
       },
       meta,
     };
@@ -351,9 +353,25 @@ export async function autoAnalyzeFromWeb(
 
   const deep = await deepAnalyze(
     opts,
-    quick.result.fiscalPeriod,
-    quick.result.reportedAt,
+    quick.result.latestFiscalPeriod,
+    quick.result.latestReportedAt,
   );
+
+  const fullMeta: AutoAnalyzeMeta = {
+    ...meta,
+    model: `${QUICK_MODEL} + ${deep.model}`,
+    deepInputTokens: deep.inputTokens,
+    deepOutputTokens: deep.outputTokens,
+    deepToolCalls: deep.toolCalls,
+  };
+
+  // Deep stage may abort if it can't actually find the period after fetching
+  if ("status" in deep.result) {
+    return {
+      result: { status: "no_new_earnings", reason: `Deep stage aborted: ${deep.result.reason}` },
+      meta: fullMeta,
+    };
+  }
 
   return {
     result: {
@@ -363,12 +381,6 @@ export async function autoAnalyzeFromWeb(
       sourceUrls: deep.result.sourceUrls,
       report: deep.result.report,
     },
-    meta: {
-      ...meta,
-      model: `${QUICK_MODEL} + ${deep.model}`,
-      deepInputTokens: deep.inputTokens,
-      deepOutputTokens: deep.outputTokens,
-      deepToolCalls: deep.toolCalls,
-    },
+    meta: fullMeta,
   };
 }

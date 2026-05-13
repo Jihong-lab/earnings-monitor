@@ -1,0 +1,72 @@
+﻿[
+    {
+        "slug":  "googl",
+        "status":  "new",
+        "elapsed":  279,
+        "period":  "CY2026Q1",
+        "error":  null
+    },
+    {
+        "slug":  "aapl",
+        "status":  "new",
+        "elapsed":  146,
+        "period":  "FY2026Q2",
+        "error":  null
+    },
+    {
+        "slug":  "msft",
+        "status":  "new",
+        "elapsed":  149,
+        "period":  "FY2026Q3",
+        "error":  null
+    },
+    {
+        "slug":  "samsung",
+        "status":  "error",
+        "elapsed":  130,
+        "period":  null,
+        "error":  "Deep analysis returned invalid envelope: fiscalPeriod: Invalid input: expected string, received undefined; reportedAt: Invalid input: expected string, received undefined; sourceUrls: Invalid input: expected array, received undefined; report: Invalid input: expected object, received undefined"
+    },
+    {
+        "slug":  "alibaba",
+        "status":  "error",
+        "elapsed":  487,
+        "period":  null,
+        "error":  "Deep analysis returned invalid envelope: fiscalPeriod: Invalid input: expected string, received undefined; reportedAt: Invalid input: expected string, received undefined; sourceUrls: Invalid input: expected array, received undefined; report: Invalid input: expected object, received undefined"
+    },
+    {
+        "slug":  "icbc",
+        "status":  "new",
+        "elapsed":  309,
+        "period":  "CY2026Q1",
+        "error":  null
+    },
+    {
+        "slug":  "hsbc",
+        "status":  "new",
+        "elapsed":  118,
+        "period":  "FY2026Q1",
+        "error":  null
+    },
+    {
+        "slug":  "cba",
+        "status":  "no_new_earnings",
+        "elapsed":  16,
+        "period":  null,
+        "error":  null
+    },
+    {
+        "slug":  "mufg",
+        "status":  "no_new_earnings",
+        "elapsed":  9,
+        "period":  null,
+        "error":  null
+    },
+    {
+        "slug":  "hdfc-bank",
+        "status":  "new",
+        "elapsed":  146,
+        "period":  "FY2026Q4",
+        "error":  null
+    }
+]
