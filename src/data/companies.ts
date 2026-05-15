@@ -14,6 +14,10 @@ export const companies: Company[] = [
   { ticker: "000660 KS", slug: "sk-hynix", name: "SK Hynix", segmentId: "asia-tech", exchange: "KS", yahooTicker: "000660.KS" },
   { ticker: "700 HK", slug: "tencent", name: "Tencent Holdings", segmentId: "asia-tech", exchange: "HK", yahooTicker: "0700.HK" },
   { ticker: "9988 HK", slug: "alibaba", name: "Alibaba Group", segmentId: "asia-tech", exchange: "HK", yahooTicker: "9988.HK" },
+  { ticker: "3533 TT", slug: "lotes", name: "Lotes", segmentId: "asia-tech", exchange: "TT", yahooTicker: "3533.TW" },
+  { ticker: "3037 TT", slug: "unimicron", name: "Unimicron Technology", segmentId: "asia-tech", exchange: "TT", yahooTicker: "3037.TW" },
+  { ticker: "5274 TT", slug: "aspeed", name: "ASPEED Technology", segmentId: "asia-tech", exchange: "TT", yahooTicker: "5274.TW" },
+  { ticker: "2383 TT", slug: "elite-material", name: "Elite Material", segmentId: "asia-tech", exchange: "TT", yahooTicker: "2383.TW" },
 
   // Asia Financials
   { ticker: "1398 HK", slug: "icbc", name: "Industrial & Commercial Bank of China", segmentId: "asia-financials", exchange: "HK", yahooTicker: "1398.HK" },
