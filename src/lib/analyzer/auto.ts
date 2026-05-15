@@ -266,8 +266,8 @@ Fetch the materials and produce the full JSON report.`;
     max_tokens: 16000,
     system: [{ type: "text", text: DEEP_SYSTEM, cache_control: { type: "ephemeral" } }],
     tools: [
-      { type: "web_search_20260209", name: "web_search", max_uses: 3 },
-      { type: "web_fetch_20260209", name: "web_fetch", max_uses: 4 },
+      { type: "web_search_20260209", name: "web_search", max_uses: 2 },
+      { type: "web_fetch_20260209", name: "web_fetch", max_uses: 3 },
     ],
     messages: [{ role: "user", content: userMessage }],
   };
@@ -279,11 +279,15 @@ Fetch the materials and produce the full JSON report.`;
   const parsed = extractJson(text);
   const validation = DeepEnvelopeSchema.safeParse(parsed);
   if (!validation.success) {
+    const topKeys = parsed && typeof parsed === "object"
+      ? Object.keys(parsed as object).join(", ")
+      : typeof parsed;
+    const rawPreview = JSON.stringify(parsed).slice(0, 400);
     throw new Error(
-      `Deep analysis returned invalid envelope: ${validation.error.issues
+      `Deep analysis returned invalid envelope. Top-level keys: [${topKeys}]. Issues: ${validation.error.issues
         .slice(0, 5)
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
-        .join("; ")}`,
+        .map((i) => `${i.path.join(".") || "root"}: ${i.message}`)
+        .join("; ")}. Raw (first 400 chars): ${rawPreview}`,
     );
   }
   const toolCalls = response.content.filter((b) => b.type === "server_tool_use").length;
